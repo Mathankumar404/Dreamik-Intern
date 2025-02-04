@@ -63,6 +63,7 @@ app.post(
     { name: 'images' },
     { name: 'zipfiles' },
     { name: 'bulkzip' },
+     { name: 'excelfile' }
   ]),
   async (req, res) => {
     const client = new Client();
@@ -143,6 +144,11 @@ app.post(
           await uploadFileToBothFolders(zipFile.buffer, filename);
         }
       }
+      if (req.files['excelfile']) {
+  const excelFile = req.files['excelfile'][0];
+  await uploadFileToBothFolders(excelFile.buffer, `Excel-${f}.json`);
+}
+
 
       if (req.files['bulkzip']) {
         for (const [index, zipFile] of req.files['bulkzip'].entries()) {
@@ -242,6 +248,23 @@ app.get('/retrieve/:orderId', async (req, res) => {
     }
 
     // Read the extracted images and convert to Base64
+const excelFile = files.find(file => file.name.endsWith('.json') && file.name.includes('Excel'));
+if (excelFile) {
+  const excelFilePath = `${folderPath}/${excelFile.name}`;
+  const localExcelPath = path.join(__dirname, excelFile.name);
+
+  // Download the file
+  await client.downloadTo(localExcelPath, excelFilePath);
+
+  // Read and parse the JSON
+  const excelContent = await fs.promises.readFile(localExcelPath, 'utf-8');
+
+  // Add to response
+  res.status(200).json({
+    ...existingResponseData,
+    excelFile: JSON.parse(excelContent),
+  });
+}
     const extractedFiles = await fs.promises.readdir(extractedFolderPath);
     const imageData = [];
 
